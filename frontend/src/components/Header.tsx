@@ -13,17 +13,22 @@ export function Header({ projectName, sourceFilename, erpNumber }: HeaderProps) 
     // has a built-in navy background, so a permanent dark band keeps the
     // logo edge invisible regardless of light/dark mode.
     <header className="border-b border-ink-800 bg-ink-900">
-      <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-2 sm:gap-4 sm:px-6 lg:px-8 2xl:max-w-[1440px]">
-        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          <img
-            src="/processarc-logo.png"
-            alt="ProcessArc"
-            className="h-8 w-auto sm:h-9"
-            // Width hint for the browser so layout doesn't jump while the
-            // image loads. The actual rendered width follows h-9 + aspect.
-            width={144}
-            height={36}
-          />
+      <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-2.5 sm:gap-4 sm:px-6 lg:px-8 2xl:max-w-[1440px]">
+        <div className="flex shrink-0 items-center gap-3 sm:gap-4">
+          {/* Logo sits in a light "island" so the dark-navy wordmark reads
+              cleanly against the dark header band. The soft shadow and ring
+              keep the chip from looking pasted-on. */}
+          <div className="inline-flex items-center rounded-md bg-white px-3 py-1 shadow-md shadow-black/30 ring-1 ring-black/5">
+            <img
+              src="/processarc-logo.png"
+              alt="ProcessArc"
+              className="h-8 w-auto sm:h-9"
+              // Width hint for the browser so layout doesn't jump while the
+              // image loads. The actual rendered width follows h-9 + aspect.
+              width={144}
+              height={36}
+            />
+          </div>
           {/* Subtitle hidden on phones — the logo alone identifies the app. */}
           <span className="hidden text-[11px] uppercase tracking-wide text-ink-400 sm:inline">UFP Phase 1</span>
         </div>
