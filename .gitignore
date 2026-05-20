@@ -1,0 +1,67 @@
+# =============================================================================
+# Secrets — never commit
+# =============================================================================
+.env
+.env.local
+.env.*.local
+
+# =============================================================================
+# Customer data — never commit
+# These directories and files hold real UFP plant data (device names,
+# register addresses, treating sequence prose, personnel sign-off names).
+# Belongs on the engineer's machine only, never in a public repo.
+# =============================================================================
+
+# Per-project working state and generated deliverables
+projects/
+
+# Customer / vendor template workbooks read at runtime
+templates/*.xlsx
+templates/*.xls
+templates/*.xlsm
+
+# Internal UFP read files describing the real Fairless Hills + Hampton plants
+docs/*ReadFile.md
+docs/*_ReadFile.md
+
+# Stale day-1 STATUS file; docs/Build_Status.md is the canonical one
+/STATUS.md
+
+# =============================================================================
+# Python
+# =============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# =============================================================================
+# Node / Vite
+# =============================================================================
+node_modules/
+dist/
+dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =============================================================================
+# OS / editor
+# =============================================================================
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*.sublime-*
+
+# =============================================================================
+# Logs
+# =============================================================================
+*.log
