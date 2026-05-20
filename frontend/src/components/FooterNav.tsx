@@ -15,7 +15,7 @@ export function FooterNav({
 }: FooterNavProps) {
   return (
     <footer className="border-t border-ink-200 bg-white dark:border-ink-700 dark:bg-ink-800">
-      <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-3">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8 2xl:max-w-[1440px]">
         <button
           type="button"
           disabled={!canBack}

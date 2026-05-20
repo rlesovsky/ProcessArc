@@ -206,7 +206,7 @@ export default function App() {
       />
 
       <main className="flex-1 overflow-auto">
-        <div className="mx-auto w-full max-w-5xl px-6 py-6">
+        <div className="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8 2xl:max-w-[1440px]">
           {s.error && (
             <div className="mb-4 rounded-card border border-danger-500/40 bg-danger-50 px-3 py-2 text-sm text-danger-700 dark:bg-danger-500/10 dark:text-danger-500">
               {s.error}
