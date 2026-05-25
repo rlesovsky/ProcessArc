@@ -1,0 +1,52 @@
+# What NOT to send to the Docker daemon as build context. Keeping this
+# tight makes `docker build` faster and prevents accidentally baking
+# secrets or stale build artifacts into an image layer.
+
+# Version control + tooling
+.git
+.gitignore
+.github
+.claude
+
+# Python build/runtime cruft (rebuilt inside the image)
+**/__pycache__
+**/*.pyc
+**/*.pyo
+backend/.venv
+.venv
+.pytest_cache
+*.egg-info
+
+# Node build cruft (Stage 1 of the Dockerfile runs `npm ci` fresh)
+frontend/node_modules
+frontend/dist
+frontend/.vite
+
+# Customer data, generated outputs, env secrets — never bake these
+# into the image. The image picks them up at runtime from /data
+# (mounted volume) and from environment variables.
+backend/.env
+.env
+.env.*
+projects/
+templates/
+
+# IDE / OS clutter
+.vscode
+.idea
+.DS_Store
+*.swp
+
+# Docs and PyInstaller stuff aren't needed in the runtime image
+docs/
+processarc.spec
+dist/                # PyInstaller output
+build/               # PyInstaller staging
+*.docx               # Generated deliverables sometimes land here
+README.md
+STATUS.md
+pytest.ini
+
+# Test fixtures and test code — not needed at runtime
+backend/tests
+frontend/src/test

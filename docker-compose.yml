@@ -1,0 +1,39 @@
+# Reference docker-compose file for self-hosting ProcessArc.
+#
+# Quick start:
+#   1. Save your Anthropic API key in a .env next to this file:
+#        ANTHROPIC_API_KEY=sk-ant-...
+#   2. docker compose up -d
+#   3. Open http://localhost:8000
+#
+# State (projects, templates, .env) persists in a named volume called
+# `processarc-data`. To move to a new host, copy that volume across.
+
+services:
+  processarc:
+    image: ghcr.io/rlesovsky/processarc:latest
+    container_name: processarc
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Pass through from the .env next to this compose file. You can
+      # also export ANTHROPIC_API_KEY in your shell, or hard-code it
+      # here for a private deployment — but don't commit the value.
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+      # Optional: override the model. Defaults to claude-sonnet-4-6.
+      # CLAUDE_MODEL: "claude-sonnet-4-6"
+    volumes:
+      # Persistent app data. Use a named volume for portability, or
+      # swap to a bind mount (e.g. `./data:/data`) if you'd rather
+      # see the files on the host.
+      - processarc-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  processarc-data:

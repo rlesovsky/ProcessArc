@@ -1,3 +1,4 @@
+import os
 import sys
 from functools import lru_cache
 from pathlib import Path
@@ -33,27 +34,74 @@ def _user_data_dir() -> Path:
     we ship for.
     """
     if sys.platform == "win32":
-        import os
         base = Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming")
         return base / "ProcessArc"
     if sys.platform == "darwin":
         return Path.home() / "Library" / "Application Support" / "ProcessArc"
     # Linux / other Unix
-    import os
     base = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
     return base / "processarc"
 
 
+def _data_root() -> Path:
+    """Resolve the directory that holds .env, projects/, templates/.
+
+    Priority:
+      1. ``PROCESSARC_DATA_DIR`` env var — explicit override, used by
+         the Docker image (set to ``/data`` so user data lives in a
+         mounted volume that survives container restarts).
+      2. ``_user_data_dir()`` when running inside a PyInstaller bundle —
+         the bundle's own paths are in a temp extraction dir that
+         gets wiped on every launch.
+      3. ``BACKEND_ROOT`` for normal dev: ``backend/.env`` next to
+         the source.
+    """
+    override = os.environ.get("PROCESSARC_DATA_DIR")
+    if override:
+        return Path(override).expanduser().resolve()
+    if _is_frozen():
+        return _user_data_dir()
+    return BACKEND_ROOT
+
+
+def _projects_root() -> Path:
+    """Default ``projects/`` location, mirroring the rules above.
+
+    In dev mode the historical default is ``<repo>/projects`` (sibling
+    of ``backend/``), not ``backend/projects`` — so we anchor on
+    ``PROJECT_ROOT`` rather than ``BACKEND_ROOT`` when no override is
+    set. In Docker or frozen modes everything sits next to ``.env``
+    inside the data root.
+    """
+    override = os.environ.get("PROCESSARC_DATA_DIR")
+    if override:
+        return Path(override).expanduser().resolve() / "projects"
+    if _is_frozen():
+        return _user_data_dir() / "projects"
+    return PROJECT_ROOT / "projects"
+
+
+def _templates_root() -> Path:
+    """Default ``templates/`` location — same rules as ``_projects_root``."""
+    override = os.environ.get("PROCESSARC_DATA_DIR")
+    if override:
+        return Path(override).expanduser().resolve() / "templates"
+    if _is_frozen():
+        return _user_data_dir() / "templates"
+    return PROJECT_ROOT / "templates"
+
+
 # Source of truth for where the app reads/writes:
-# - Dev mode (running from a checkout):  backend/.env, <repo>/projects, <repo>/templates
-# - Frozen mode (the .exe):              <user-data-dir>/.env, <user-data-dir>/projects, ...
+# - Dev mode (checkout):       backend/.env, <repo>/projects, <repo>/templates
+# - Frozen mode (.exe):        <user-data-dir>/.env, <user-data-dir>/projects, ...
+# - Docker mode ($PROCESSARC_DATA_DIR set):
+#                              <data-dir>/.env, <data-dir>/projects, <data-dir>/templates
 #
-# Both modes look the same from the app's perspective — only the paths
-# change. Tests run in dev mode.
-_DATA_ROOT = _user_data_dir() if _is_frozen() else BACKEND_ROOT
-_PROJECTS_DEFAULT = (_user_data_dir() if _is_frozen() else PROJECT_ROOT) / "projects"
-_TEMPLATES_DEFAULT = (_user_data_dir() if _is_frozen() else PROJECT_ROOT) / "templates"
-ENV_FILE = _DATA_ROOT / ".env"
+# All three modes look the same from the app's perspective — only the
+# paths change. Tests run in dev mode.
+_PROJECTS_DEFAULT = _projects_root()
+_TEMPLATES_DEFAULT = _templates_root()
+ENV_FILE = _data_root() / ".env"
 
 
 class Settings(BaseSettings):
