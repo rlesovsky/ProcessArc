@@ -158,22 +158,53 @@ def main() -> int:
     url = f"http://127.0.0.1:{port}/"
     log.info("Selected port %d; URL %s", port, url)
 
+    # On Windows + Python 3.11, the default asyncio event loop policy
+    # is the Proactor loop. Uvicorn historically required the Selector
+    # loop on Windows; modern uvicorn handles either but exceptions
+    # raised during startup with the Proactor loop have been observed
+    # to vanish silently from background threads (no traceback hits
+    # stderr because there's no console). Force the Selector loop on
+    # Windows for parity with the dev environment and predictable
+    # error handling.
+    if sys.platform == "win32":
+        import asyncio
+        try:
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+            log.info("Set Windows asyncio policy to Selector")
+        except Exception:
+            log.exception("Failed to set Windows asyncio Selector policy; continuing with default")
+
     config = uvicorn.Config(
         app,
         host="127.0.0.1",
         port=port,
         log_level="info",
         access_log=False,
-        # workers/loop/http defaults are fine on Windows. uvloop is not
-        # available on Windows and uvicorn falls back to asyncio
-        # automatically.
+        # Explicit loop=asyncio prevents uvicorn from trying to import
+        # uvloop (which doesn't exist on Windows but would emit a
+        # noisy warning) and pins behavior across platforms.
+        loop="asyncio",
     )
     server = uvicorn.Server(config)
+
+    def _run_server() -> None:
+        """Background thread target — catches and logs anything uvicorn
+        throws so we don't get a hung process with no diagnostic.
+
+        Without this wrapper, exceptions in a daemon thread silently
+        terminate the thread and stdout/stderr go nowhere in a hidden-
+        console build, leaving the main thread waiting on a port that
+        will never bind.
+        """
+        try:
+            server.run()
+        except Exception:
+            log.exception("uvicorn server crashed during run()")
 
     # Run uvicorn in a background thread so we can open the browser
     # once it's ready, and so Ctrl+C / window close lands cleanly.
     server_thread = threading.Thread(
-        target=server.run, name="uvicorn", daemon=True
+        target=_run_server, name="uvicorn", daemon=True
     )
     server_thread.start()
 
@@ -184,6 +215,9 @@ def main() -> int:
         except Exception:
             log.exception("Could not open default browser; user can navigate to %s manually", url)
     else:
+        if not server_thread.is_alive():
+            log.error("Server thread died before binding the port; see traceback above. Exiting.")
+            return 1
         log.error("Server did not become ready within timeout; opening browser anyway")
         webbrowser.open(url)
 
