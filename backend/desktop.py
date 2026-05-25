@@ -162,7 +162,35 @@ def _open_browser_when_ready(port: int, log: logging.Logger) -> None:
         log.exception("Could not open default browser; user can navigate to %s manually", url)
 
 
+def _ensure_stdio() -> None:
+    """Make sure sys.stdout / sys.stderr are not None.
+
+    In a PyInstaller windowed build (``console=False``) Windows runs
+    the binary with no allocated console, so the Python runtime sets
+    ``sys.stdout = None`` and ``sys.stderr = None``. Code that
+    introspects these streams blows up — most relevantly uvicorn's
+    default logger, which calls ``isatty()`` on stderr at import time
+    and crashes with ``AttributeError: 'NoneType' object has no
+    attribute 'isatty'``.
+
+    Routing the streams to ``os.devnull`` (the Windows equivalent is
+    transparently mapped) is the standard PyInstaller workaround.
+    Anything our app writes to stdout/stderr is already redundant with
+    the rotating file logger set up by ``_setup_logging`` — these
+    streams should normally be unused in production.
+    """
+    import os
+    if sys.stdout is None:
+        sys.stdout = open(os.devnull, "w", encoding="utf-8")
+    if sys.stderr is None:
+        sys.stderr = open(os.devnull, "w", encoding="utf-8")
+
+
 def main() -> int:
+    # MUST run before anything that touches stdio (uvicorn's default
+    # logger reads sys.stderr at import time).
+    _ensure_stdio()
+
     log_path = _setup_logging()
     log = logging.getLogger("processarc.desktop")
     log.info("ProcessArc desktop launcher starting (log: %s)", log_path)
