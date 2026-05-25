@@ -1,0 +1,105 @@
+# Build the ProcessArc Windows desktop binary (ProcessArc.exe).
+#
+# Triggers:
+#   - Manual: Actions tab → "Build Windows .exe" → "Run workflow"
+#   - Tag push: pushing a tag like `v0.1.0` builds and attaches the
+#     binary to the GitHub Release for that tag.
+#
+# Outputs:
+#   - Workflow artifact `ProcessArc-windows-exe` containing
+#     `ProcessArc.exe` (downloadable from the run summary for ~90 days)
+#   - On tag triggers: the same .exe attached to the Release for the tag
+#
+# The build matches `processarc.spec` — see that file for what's bundled.
+
+name: Build Windows .exe
+
+on:
+  workflow_dispatch:        # Manual trigger from the GitHub UI
+  push:
+    tags:
+      - 'v*'                # e.g. v0.1.0, v0.2.0-rc1
+
+permissions:
+  contents: write           # Needed to attach the .exe to a Release
+
+jobs:
+  build:
+    name: Build ProcessArc.exe
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build React frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend deps + PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pyinstaller==6.10.0
+
+      - name: Build ProcessArc.exe with PyInstaller
+        run: pyinstaller --clean --noconfirm processarc.spec
+
+      - name: Smoke-test the .exe (boots, /health responds)
+        # Launch the freshly-built exe, hit /health, kill it. If the
+        # bundle is broken (missing imports, wrong static path) this
+        # catches it before we publish the artifact.
+        shell: pwsh
+        run: |
+          $exe = "dist\ProcessArc.exe"
+          if (-not (Test-Path $exe)) { Write-Error "Build produced no exe at $exe"; exit 1 }
+          $proc = Start-Process -FilePath $exe -PassThru -WindowStyle Hidden
+          try {
+            # The launcher tries port 8765 first; give it time to come up.
+            $deadline = (Get-Date).AddSeconds(30)
+            $ok = $false
+            while ((Get-Date) -lt $deadline) {
+              try {
+                $resp = Invoke-WebRequest -Uri "http://127.0.0.1:8765/health" -UseBasicParsing -TimeoutSec 2
+                if ($resp.StatusCode -eq 200) { $ok = $true; break }
+              } catch { Start-Sleep -Milliseconds 500 }
+            }
+            if (-not $ok) { Write-Error "ProcessArc.exe did not respond on /health within 30s"; exit 1 }
+            Write-Host "Smoke test passed:"
+            Write-Host $resp.Content
+          } finally {
+            if ($proc -and -not $proc.HasExited) { Stop-Process -Id $proc.Id -Force }
+          }
+
+      - name: Upload .exe as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ProcessArc-windows-exe
+          path: dist/ProcessArc.exe
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Attach .exe to GitHub Release (tag pushes only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/ProcessArc.exe
+          generate_release_notes: true
