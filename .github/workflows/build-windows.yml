@@ -64,9 +64,12 @@ jobs:
         run: pyinstaller --clean --noconfirm processarc.spec
 
       - name: Smoke-test the .exe (boots, /health responds)
-        # Launch the freshly-built exe, find which port it actually
-        # bound to (the launcher tries 8765 first but falls back to an
-        # OS-assigned port if 8765 is occupied), hit /health, kill it.
+        # Launch the freshly-built exe, probe /health on the launcher's
+        # preferred port (8765), kill it. On a fresh CI runner 8765 is
+        # always free so the launcher's fallback never trips — we can
+        # probe the known port directly instead of trying to discover
+        # it via Get-NetTCPConnection (which has been flaky here).
+        #
         # On any failure we dump the app log from %APPDATA% so a broken
         # bundle is diagnosable instead of "exe just hung".
         shell: pwsh
@@ -80,41 +83,25 @@ jobs:
           # a cold runner, especially with antivirus scanning. The
           # outer timeout below is generous to cover that.
           $proc = Start-Process -FilePath $exe -PassThru -WindowStyle Hidden
-          Write-Host "Launched PID $($proc.Id), waiting for it to bind a TCP port..."
+          Write-Host "Launched PID $($proc.Id); probing /health on :8765..."
 
           $logPath = Join-Path $env:APPDATA "ProcessArc\logs\app.log"
-          $port = $null
-          $deadline = (Get-Date).AddSeconds(90)
+          $ok = $false
+          $deadline = (Get-Date).AddSeconds(60)
           while ((Get-Date) -lt $deadline) {
             if ($proc.HasExited) {
               Write-Warning "Process exited early with code $($proc.ExitCode)"
               break
             }
-            # Find any TCP port owned by our process. The launcher
-            # only ever binds one port, so the first hit is correct.
-            $conn = Get-NetTCPConnection -OwningProcess $proc.Id -State Listen -ErrorAction SilentlyContinue |
-                    Select-Object -First 1
-            if ($conn) { $port = $conn.LocalPort; break }
-            Start-Sleep -Milliseconds 500
-          }
-
-          $ok = $false
-          if ($port) {
-            Write-Host "Process is listening on port $port; probing /health..."
-            $probeDeadline = (Get-Date).AddSeconds(15)
-            while ((Get-Date) -lt $probeDeadline) {
-              try {
-                $resp = Invoke-WebRequest -Uri "http://127.0.0.1:$port/health" -UseBasicParsing -TimeoutSec 3
-                if ($resp.StatusCode -eq 200) {
-                  Write-Host "Smoke test passed:"
-                  Write-Host $resp.Content
-                  $ok = $true
-                  break
-                }
-              } catch { Start-Sleep -Milliseconds 500 }
-            }
-          } else {
-            Write-Warning "Process never bound a TCP port within 90s"
+            try {
+              $resp = Invoke-WebRequest -Uri "http://127.0.0.1:8765/health" -UseBasicParsing -TimeoutSec 3
+              if ($resp.StatusCode -eq 200) {
+                Write-Host "Smoke test passed:"
+                Write-Host $resp.Content
+                $ok = $true
+                break
+              }
+            } catch { Start-Sleep -Milliseconds 500 }
           }
 
           if (-not $ok) {
