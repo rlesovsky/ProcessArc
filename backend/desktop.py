@@ -142,14 +142,50 @@ def _wait_until_ready(port: int, timeout: float = 10.0) -> bool:
     return False
 
 
+def _open_browser_when_ready(port: int, log: logging.Logger) -> None:
+    """Background thread target — wait for the server to bind, then
+    open the default browser. Runs concurrent with uvicorn on the main
+    thread.
+
+    Failures here are non-fatal: the user can navigate to the URL
+    manually if the auto-open misfires (e.g. no default browser
+    configured, or running on a headless server).
+    """
+    url = f"http://127.0.0.1:{port}/"
+    if _wait_until_ready(port):
+        log.info("Server ready; opening browser at %s", url)
+    else:
+        log.warning("Server didn't open port within timeout; opening browser anyway at %s", url)
+    try:
+        webbrowser.open(url)
+    except Exception:
+        log.exception("Could not open default browser; user can navigate to %s manually", url)
+
+
 def main() -> int:
     log_path = _setup_logging()
     log = logging.getLogger("processarc.desktop")
     log.info("ProcessArc desktop launcher starting (log: %s)", log_path)
 
+    # On Windows + Python 3.11, the default asyncio event loop policy
+    # is the Proactor loop. Uvicorn historically required the Selector
+    # loop on Windows; modern uvicorn supports either but the Selector
+    # loop is its proven-stable default and matches dev behavior.
+    # Setting this BEFORE importing uvicorn keeps any module-level
+    # loop selection from latching onto the Proactor.
+    if sys.platform == "win32":
+        try:
+            import asyncio
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+            log.info("Set Windows asyncio policy to Selector")
+        except Exception:
+            log.exception("Failed to set Windows asyncio Selector policy; continuing with default")
+
     try:
+        log.info("Importing uvicorn + FastAPI app...")
         import uvicorn
         from backend.api.main import app  # imports the FastAPI app
+        log.info("Imports OK")
     except Exception:
         log.exception("Failed to import backend.api.main; the .exe build is broken.")
         return 1
@@ -158,82 +194,37 @@ def main() -> int:
     url = f"http://127.0.0.1:{port}/"
     log.info("Selected port %d; URL %s", port, url)
 
-    # On Windows + Python 3.11, the default asyncio event loop policy
-    # is the Proactor loop. Uvicorn historically required the Selector
-    # loop on Windows; modern uvicorn handles either but exceptions
-    # raised during startup with the Proactor loop have been observed
-    # to vanish silently from background threads (no traceback hits
-    # stderr because there's no console). Force the Selector loop on
-    # Windows for parity with the dev environment and predictable
-    # error handling.
-    if sys.platform == "win32":
-        import asyncio
-        try:
-            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-            log.info("Set Windows asyncio policy to Selector")
-        except Exception:
-            log.exception("Failed to set Windows asyncio Selector policy; continuing with default")
+    # Browser opener runs in a daemon thread so it doesn't block uvicorn.
+    # uvicorn itself MUST run on the main thread on Windows — running it
+    # from a thread has been observed to hang silently during startup
+    # (signal-handler installation and event-loop selection have main-
+    # thread assumptions that don't always raise when violated). The
+    # tradeoff: Ctrl+C handling is uvicorn's job rather than ours, which
+    # is what we want anyway in a windowless desktop build.
+    threading.Thread(
+        target=_open_browser_when_ready,
+        args=(port, log),
+        name="browser-opener",
+        daemon=True,
+    ).start()
 
-    config = uvicorn.Config(
-        app,
-        host="127.0.0.1",
-        port=port,
-        log_level="info",
-        access_log=False,
-        # Explicit loop=asyncio prevents uvicorn from trying to import
-        # uvloop (which doesn't exist on Windows but would emit a
-        # noisy warning) and pins behavior across platforms.
-        loop="asyncio",
-    )
-    server = uvicorn.Server(config)
-
-    def _run_server() -> None:
-        """Background thread target — catches and logs anything uvicorn
-        throws so we don't get a hung process with no diagnostic.
-
-        Without this wrapper, exceptions in a daemon thread silently
-        terminate the thread and stdout/stderr go nowhere in a hidden-
-        console build, leaving the main thread waiting on a port that
-        will never bind.
-        """
-        try:
-            server.run()
-        except Exception:
-            log.exception("uvicorn server crashed during run()")
-
-    # Run uvicorn in a background thread so we can open the browser
-    # once it's ready, and so Ctrl+C / window close lands cleanly.
-    server_thread = threading.Thread(
-        target=_run_server, name="uvicorn", daemon=True
-    )
-    server_thread.start()
-
-    if _wait_until_ready(port):
-        log.info("Server ready; opening browser at %s", url)
-        try:
-            webbrowser.open(url)
-        except Exception:
-            log.exception("Could not open default browser; user can navigate to %s manually", url)
-    else:
-        if not server_thread.is_alive():
-            log.error("Server thread died before binding the port; see traceback above. Exiting.")
-            return 1
-        log.error("Server did not become ready within timeout; opening browser anyway")
-        webbrowser.open(url)
-
-    # Block until the server stops (e.g. Ctrl+C in a visible-console
-    # build, or some other shutdown signal). In a windowed build the
-    # user closing the browser tab does NOT stop the server — the .exe
-    # keeps running in the background. They'd kill it via Task Manager.
-    # That's the standard tradeoff for "windowless server-style"
-    # desktop apps; we accept it for v1 and can layer on a system-tray
-    # icon later if it matters.
+    log.info("Building uvicorn config and starting server (blocking)...")
     try:
-        server_thread.join()
+        uvicorn.run(
+            app,
+            host="127.0.0.1",
+            port=port,
+            log_level="info",
+            access_log=False,
+        )
+    except SystemExit:
+        # uvicorn raises SystemExit on its own clean shutdown path.
+        log.info("uvicorn requested SystemExit; shutting down cleanly")
     except KeyboardInterrupt:
-        log.info("KeyboardInterrupt; asking uvicorn to shut down")
-        server.should_exit = True
-        server_thread.join(timeout=5)
+        log.info("KeyboardInterrupt; shutting down cleanly")
+    except Exception:
+        log.exception("uvicorn crashed during run(); exiting non-zero")
+        return 1
 
     log.info("ProcessArc desktop launcher exiting")
     return 0
