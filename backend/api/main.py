@@ -13,6 +13,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.features.ignition_tags.router import router as ignition_tags_router
 from backend.settings import get_settings
 
 from .routers import (
@@ -57,3 +58,4 @@ app.include_router(projects.router)
 app.include_router(settings_router.router)
 app.include_router(extract_router.router)
 app.include_router(export_router.router)
+app.include_router(ignition_tags_router)

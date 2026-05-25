@@ -1,0 +1,216 @@
+{
+  "name": "UFP_Athens",
+  "tagType": "Folder",
+  "tags": [
+    {
+      "name": "A1",
+      "tagType": "Folder",
+      "tags": [
+        {
+          "name": "01",
+          "tagType": "Folder",
+          "tags": [
+            {
+              "name": "LevelSensors",
+              "tagType": "Folder",
+              "tags": [
+                {
+                  "name": "Tank 1",
+                  "typeId": "Tank/Tank Level Sensors",
+                  "tagType": "UdtInstance",
+                  "tags": [
+                    {
+                      "name": "Raw Max",
+                      "tagType": "AtomicTag",
+                      "opcItemPath": {
+                        "bindType": "parameter",
+                        "binding": "ns=1;s=[{plc}]550"
+                      }
+                    },
+                    {
+                      "name": "Raw Min",
+                      "tagType": "AtomicTag",
+                      "opcItemPath": {
+                        "bindType": "parameter",
+                        "binding": "ns=1;s=[{plc}]500"
+                      }
+                    },
+                    {
+                      "name": "Scaled Max",
+                      "tagType": "AtomicTag",
+                      "opcItemPath": {
+                        "bindType": "parameter",
+                        "binding": "ns=1;s=[{plc}]660"
+                      }
+                    },
+                    {
+                      "name": "Scaled Min",
+                      "tagType": "AtomicTag",
+                      "opcItemPath": {
+                        "bindType": "parameter",
+                        "binding": "ns=1;s=[{plc}]600"
+                      }
+                    },
+                    {
+                      "name": "Scaled Offset",
+                      "tagType": "AtomicTag",
+                      "opcItemPath": {
+                        "bindType": "parameter",
+                        "binding": "ns=1;s=[{plc}]720"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Tank 2",
+                  "typeId": "Tank/Tank Level Sensors",
+                  "tagType": "UdtInstance",
+                  "tags": [
+                    {
+                      "name": "Raw Max",
+                      "tagType": "AtomicTag",
+                      "opcItemPath": {
+                        "bindType": "parameter",
+                        "binding": "ns=1;s=[{plc}]551"
+                      }
+                    },
+                    {
+                      "name": "Raw Min",
+                      "tagType": "AtomicTag",
+                      "opcItemPath": {
+                        "bindType": "parameter",
+                        "binding": "ns=1;s=[{plc}]501"
+                      }
+                    },
+                    {
+                      "name": "Scaled Max",
+                      "tagType": "AtomicTag",
+                      "opcItemPath": {
+                        "bindType": "parameter",
+                        "binding": "ns=1;s=[{plc}]662"
+                      }
+                    },
+                    {
+                      "name": "Scaled Min",
+                      "tagType": "AtomicTag",
+                      "opcItemPath": {
+                        "bindType": "parameter",
+                        "binding": "ns=1;s=[{plc}]602"
+                      }
+                    },
+                    {
+                      "name": "Scaled Offset",
+                      "tagType": "AtomicTag",
+                      "opcItemPath": {
+                        "bindType": "parameter",
+                        "binding": "ns=1;s=[{plc}]722"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Tank 3",
+                  "typeId": "Tank/Tank Level Sensors",
+                  "tagType": "UdtInstance",
+                  "tags": [
+                    {
+                      "name": "Raw Min",
+                      "tagType": "AtomicTag",
+                      "opcItemPath": {
+                        "bindType": "parameter",
+                        "binding": "ns=1;s=[{plc}]502"
+                      }
+                    },
+                    {
+                      "name": "Scaled Max",
+                      "tagType": "AtomicTag",
+                      "opcItemPath": {
+                        "bindType": "parameter",
+                        "binding": "ns=1;s=[{plc}]664"
+                      }
+                    },
+                    {
+                      "name": "Scaled Min",
+                      "tagType": "AtomicTag",
+                      "opcItemPath": {
+                        "bindType": "parameter",
+                        "binding": "ns=1;s=[{plc}]604"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "B2",
+      "tagType": "Folder",
+      "tags": [
+        {
+          "name": "02",
+          "tagType": "Folder",
+          "tags": [
+            {
+              "name": "Agitators",
+              "tagType": "Folder",
+              "tags": [
+                {
+                  "name": "Pump 1",
+                  "typeId": "Pumps/Agitator/Agitator",
+                  "tagType": "UdtInstance",
+                  "tags": [
+                    {
+                      "name": "Setpoints",
+                      "tagType": "Folder",
+                      "tags": [
+                        {
+                          "name": "High",
+                          "tagType": "Folder",
+                          "tags": [
+                            {
+                              "name": "HH",
+                              "tagType": "AtomicTag",
+                              "opcItemPath": {
+                                "bindType": "parameter",
+                                "binding": "ns=1;s=[{plc}]P1_HH"
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Status",
+                      "tagType": "Folder",
+                      "tags": [
+                        {
+                          "name": "Fault",
+                          "tagType": "AtomicTag",
+                          "opcItemPath": {
+                            "bindType": "parameter",
+                            "binding": "ns=1;s=[{plc}]P1_FLT"
+                          }
+                        },
+                        {
+                          "name": "Running",
+                          "tagType": "AtomicTag",
+                          "opcItemPath": {
+                            "bindType": "parameter",
+                            "binding": "ns=1;s=[{plc}]P1_RUN"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

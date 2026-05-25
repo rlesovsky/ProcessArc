@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend-preview",
+      "runtimeExecutable": "frontend/node_modules/.bin/vite",
+      "runtimeArgs": ["frontend", "--port", "5180", "--strictPort", "--clearScreen", "false"],
+      "port": 5180
+    }
+  ]
+}

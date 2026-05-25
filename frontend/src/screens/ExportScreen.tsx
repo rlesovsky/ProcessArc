@@ -3,6 +3,7 @@ import { Download, FileSpreadsheet, FileText, RefreshCw } from 'lucide-react';
 import { api, ApiError } from '@/api/client';
 import type { ExportFile, ExportResult, PlantConfiguration } from '@/api/types';
 import { cn } from '@/lib/cn';
+import { h1Fluid } from '@/lib/layout';
 
 interface ExportScreenProps {
   projectId: string;
@@ -36,7 +37,7 @@ export function ExportScreen({ projectId, plant }: ExportScreenProps) {
   return (
     <section className="space-y-5">
       <header>
-        <h1 className="text-xl font-semibold text-ink-900 dark:text-ink-50">Export</h1>
+        <h1 className={h1Fluid}>Export</h1>
         <p className="mt-1 text-sm text-ink-500 dark:text-ink-400">
           Two deliverables, ready to hand to UFP — sized to {summarize(plant)}.
         </p>

@@ -4,6 +4,7 @@ import { api, ApiError, type ExtractStartOptions } from '@/api/client';
 import type { ExtractState, ExtractTask, ExtractTaskStatus } from '@/api/types';
 import { StatusBadge } from '@/components/StatusBadge';
 import { cn } from '@/lib/cn';
+import { h1Fluid } from '@/lib/layout';
 
 interface ExtractScreenProps {
   projectId: string;
@@ -119,7 +120,7 @@ export function ExtractScreen({
   return (
     <section className="space-y-5">
       <header>
-        <h1 className="text-xl font-semibold text-ink-900 dark:text-ink-50">Extract devices</h1>
+        <h1 className={h1Fluid}>Extract devices</h1>
         <p className="mt-1 text-sm text-ink-500 dark:text-ink-400">
           ProcessArc reads the structured tables locally, then sends each
           sequencing sheet's prose to the Claude API to identify devices. Watch

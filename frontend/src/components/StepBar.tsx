@@ -1,5 +1,6 @@
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { container } from '@/lib/layout';
 import type { PipelineStage } from '@/api/types';
 
 const STEPS: Array<{ stage: PipelineStage; label: string }> = [
@@ -26,7 +27,7 @@ export function StepBar({ activeStage, completedStages, onJumpTo }: StepBarProps
       aria-label="Pipeline steps"
       className="border-b border-ink-200 bg-white dark:border-ink-700 dark:bg-ink-800"
     >
-      <ol className="mx-auto flex w-full max-w-7xl items-center gap-0.5 overflow-x-auto px-4 py-2 sm:gap-1 sm:px-6 lg:px-8 2xl:max-w-[1440px]">
+      <ol className={`${container} flex items-center gap-0.5 overflow-x-auto py-2 sm:gap-1`}>
         {STEPS.map((step, i) => {
           const done = completedStages.includes(step.stage);
           const active = step.stage === activeStage;

@@ -1,5 +1,7 @@
 import { ApiKeySettings } from './ApiKeySettings';
 import { ThemeToggle } from './ThemeToggle';
+import { container } from '@/lib/layout';
+import logo from '@/assets/processarc-logo-light.png';
 
 interface HeaderProps {
   projectName?: string;
@@ -9,32 +11,31 @@ interface HeaderProps {
 
 export function Header({ projectName, sourceFilename, erpNumber }: HeaderProps) {
   return (
-    // The header band stays dark navy in both themes — the ProcessArc logo
-    // has a built-in navy background, so a permanent dark band keeps the
-    // logo edge invisible regardless of light/dark mode.
-    <header className="border-b border-ink-800 bg-ink-900">
-      <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-2 sm:gap-4 sm:px-6 lg:px-8 2xl:max-w-[1440px]">
-        <div className="flex shrink-0 items-center gap-3 sm:gap-4">
-          {/* Logo rendered direct on the dark band, larger so the brand reads
-              from across a desk. The image carries its own transparency. */}
+    <header className="border-b border-ink-200 bg-white dark:border-ink-700 dark:bg-ink-850">
+      <div className={`${container} flex items-center gap-3 py-1 sm:gap-4`}>
+        <div className="flex shrink-0 items-center gap-3 px-2 sm:gap-4">
+          {/* Single transparent (RGBA) logo asset used in both themes.
+              Sized to fit the compact ~56px header band with breathing
+              room. Width auto-fits to preserve the wordmark's aspect ratio. */}
           <img
-            src="/processarc-logo.png"
+            src={logo}
             alt="ProcessArc"
-            className="h-12 w-auto sm:h-14"
-            width={224}
-            height={56}
+            className="block w-auto"
+            style={{ height: 'clamp(2.25rem, 3.3vw, 3rem)' }}
           />
           {/* Subtitle hidden on phones — the logo alone identifies the app. */}
-          <span className="hidden text-[11px] uppercase tracking-wide text-ink-400 sm:inline">UFP Phase 1</span>
+          <span className="hidden text-[11px] uppercase tracking-wide text-ink-500 dark:text-ink-400 sm:inline">
+            UFP Phase 1
+          </span>
         </div>
-        <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden whitespace-nowrap text-xs text-ink-400">
+        <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden whitespace-nowrap text-xs text-ink-500 dark:text-ink-400">
           {projectName && (
-            <span className="truncate font-medium text-ink-100">{projectName}</span>
+            <span className="truncate font-medium text-ink-900 dark:text-ink-100">{projectName}</span>
           )}
           {erpNumber && (
             <>
               <span aria-hidden>·</span>
-              <span className="font-mono text-[11px] text-ink-300">#{erpNumber}</span>
+              <span className="font-mono text-[11px] text-ink-700 dark:text-ink-300">#{erpNumber}</span>
             </>
           )}
           {sourceFilename && (

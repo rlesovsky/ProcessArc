@@ -1,4 +1,5 @@
 import { UploadSlot } from '@/components/UploadSlot';
+import { h1Fluid } from '@/lib/layout';
 
 export interface ConfigureState {
   sequenceWorkbook: File | null;
@@ -19,7 +20,7 @@ export function ConfigureScreen({ value, onChange }: ConfigureScreenProps) {
   return (
     <section className="space-y-6">
       <header>
-        <h1 className="text-xl font-semibold text-ink-900 dark:text-ink-50">Configure project</h1>
+        <h1 className={h1Fluid}>Configure project</h1>
         <p className="mt-1 text-sm text-ink-500 dark:text-ink-400">
           Supply the three input files. ProcessArc will then read the sheets and build the Plant Configuration.
         </p>

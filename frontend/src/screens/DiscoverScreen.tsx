@@ -1,6 +1,7 @@
 import { AlertTriangle } from 'lucide-react';
 import type { PlantConfiguration } from '@/api/types';
 import { StatusBadge } from '@/components/StatusBadge';
+import { h1Fluid } from '@/lib/layout';
 
 interface DiscoverScreenProps {
   plant: PlantConfiguration;
@@ -26,7 +27,7 @@ export function DiscoverScreen({ plant, onTogglePlantIdle }: DiscoverScreenProps
     <section className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-ink-900 dark:text-ink-50">
+          <h1 className={h1Fluid}>
             Confirm Plant Configuration
           </h1>
           <p className="mt-1 text-sm text-ink-500 dark:text-ink-400">
