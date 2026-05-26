@@ -119,7 +119,13 @@ jobs:
           if ($proc -and -not $proc.HasExited) { Stop-Process -Id $proc.Id -Force }
           if (-not $ok) { Write-Error "Smoke test failed"; exit 1 }
 
+      # Always upload the artifact, even if the smoke test failed —
+      # the .exe itself may still be functional and we want the user
+      # to be able to grab it. The smoke test catches "obviously
+      # broken" builds (missing imports, etc.) but its own scaffolding
+      # has been the failure point more often than the .exe so far.
       - name: Upload .exe as workflow artifact
+        if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
           name: ProcessArc-windows-exe
@@ -127,8 +133,11 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+      # Tag-push only: attach the .exe to the GitHub Release. Gated on
+      # the smoke test PASSING (success()) — we don't want to publish
+      # a release binary if the runner couldn't confirm it boots.
       - name: Attach .exe to GitHub Release (tag pushes only)
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: success() && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: dist/ProcessArc.exe
