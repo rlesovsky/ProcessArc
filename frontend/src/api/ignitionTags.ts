@@ -18,10 +18,29 @@ export interface OpcItemPath {
   binding: string;
 }
 
+/**
+ * An atomic (leaf) tag in the bundle.
+ *
+ * `opcItemPath` is present on every leaf the xlsx builder produces.
+ * Donor-sourced leaves under `Plant Info`, `Treating Data`,
+ * `Offline SQL`, and `Production` instead carry one of `value`,
+ * `expression`, `sourceTagPath`, or other Ignition-typed fields —
+ * none of which are predictable enough to model here. The renderer
+ * shows whatever short description it can extract.
+ */
 export interface AtomicTag {
   name: string;
   tagType: 'AtomicTag';
-  opcItemPath: OpcItemPath;
+  opcItemPath?: OpcItemPath | string;
+  /** A literal value (any JSON-serializable Ignition type). */
+  value?: unknown;
+  /** An Ignition expression-bound tag's expression source. */
+  expression?: string;
+  /** A reference to another tag by path. */
+  sourceTagPath?: string;
+  /** Any other Ignition tag field — kept loosely typed because the
+   *  donor surface is large and Ignition's schema is open-ended. */
+  [extra: string]: unknown;
 }
 
 export interface FolderTag {
@@ -195,8 +214,88 @@ export async function buildIgnitionTags(
   return { ok: false, kind: 'generic', message: GENERIC_ERROR_MESSAGE };
 }
 
+// =============================================================================
+// Plant bundle builder — POST /api/ignition-tags/build-plant
+// =============================================================================
+
+export interface PlantBundleConfig {
+  site_long: string;
+  site_short: string;
+  plant_number: string;
+  region_code: string;
+  /** Optional override; defaults to UFP convention server-side. */
+  mqtt_topic?: string;
+  /** Optional override; defaults to UFP convention server-side. */
+  main_project?: string;
+  cylinders: { count: number; numbering?: number[] };
+  mixing: { count: number; numbering?: number[] };
+}
+
+export async function buildPlantBundle(
+  config: PlantBundleConfig,
+  xlsx: File | null,
+  fetchImpl: typeof fetch = fetch,
+): Promise<BuildIgnitionTagsResult> {
+  const form = new FormData();
+  form.append('plant_config', JSON.stringify(config));
+  if (xlsx) form.append('xlsx_file', xlsx);
+
+  let response: Response;
+  try {
+    response = await fetchImpl('/api/ignition-tags/build-plant', {
+      method: 'POST',
+      body: form,
+    });
+  } catch {
+    return { ok: false, kind: 'generic', message: GENERIC_ERROR_MESSAGE };
+  }
+
+  if (response.status === 200) {
+    let envelope: SuccessEnvelope;
+    try {
+      envelope = (await response.json()) as SuccessEnvelope;
+    } catch (e) {
+      return {
+        ok: false,
+        kind: 'generic',
+        message: `The server returned a malformed response: ${(e as Error).message}`,
+      };
+    }
+    return {
+      ok: true,
+      bundle: envelope.bundle,
+      report: envelope.validation_report,
+      instanceCount: envelope.instance_count,
+      filename: buildFilename(envelope.site),
+    };
+  }
+
+  if (response.status === 400) {
+    try {
+      const body = (await response.json()) as {
+        error?: string;
+        validation_report?: ValidationReport;
+      };
+      if (body.validation_report) {
+        return {
+          ok: false,
+          kind: 'validation',
+          message: body.error ?? 'Plant config failed validation.',
+          report: body.validation_report,
+        };
+      }
+    } catch {
+      // fall through
+    }
+    return { ok: false, kind: 'generic', message: GENERIC_ERROR_MESSAGE };
+  }
+
+  return { ok: false, kind: 'generic', message: GENERIC_ERROR_MESSAGE };
+}
+
 export const ignitionTagsApi = {
   build: buildIgnitionTags,
+  buildPlant: buildPlantBundle,
   instanceCount,
 };
 

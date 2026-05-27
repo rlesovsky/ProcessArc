@@ -1,0 +1,35 @@
+Source file:        /Users/randylesovsky/Documents/project_manager/Documents/tags.json
+Source plant name:  Bartow FL 523
+Branch extracted:   cylinders
+
+Tag counts in extracted fragment (by tagType):
+  AtomicTag: 1383
+  Folder: 45
+  UdtInstance: 100
+
+Whole-value substitutions:
+
+In-string substitutions:
+  'Bartow FL 523' → __SITE_LONG__: 2
+  'Bartow' → __SITE_SHORT__: 4
+
+OPC bracket rewrites (raw bracket name → __SITE_SHORT__):
+  [Bartow]: 709  (canonical)
+  [Fairless Hills]: 7  (LEAK)
+
+Datasource rewrites (raw datasource value → __SITE_SHORT__):
+  'Orlando': 21  (LEAK)
+
+History provider rewrites (raw value → __SITE_SHORT__):
+  'Bartow': 64  (canonical)
+
+[SCADA]<long-name>/... rewrites (any long name → __SITE_LONG__):
+  'Bartow FL 523': 4  (canonical)
+  'Orlando FL 439': 1  (LEAK)
+
+Plant Info per-path value overrides:
+
+Subtrees dropped during extraction:
+
+Anomalies observed:
+  (none)

@@ -65,3 +65,7 @@ pnpm-debug.log*
 # Logs
 # =============================================================================
 *.log
+# Plant Bundle Builder: extraction logs commit alongside their donor
+# JSON as audit documentation (see donors/README.md). They are not
+# transient runtime logs.
+!backend/features/ignition_tags/donors/*.log

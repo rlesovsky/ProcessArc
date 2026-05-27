@@ -1,0 +1,38 @@
+Source file:        /Users/randylesovsky/Documents/project_manager/Documents/tags.json
+Source plant name:  Bartow FL 523
+Branch extracted:   plant_level
+
+Tag counts in extracted fragment (by tagType):
+  AtomicTag: 489
+  Folder: 48
+  UdtInstance: 3
+
+Whole-value substitutions:
+
+In-string substitutions:
+  'Bartow' → __SITE_SHORT__: 6
+  'UFP Industries/523-Bartow/PTS' → __MQTT_TOPIC__: 1
+  '_523_Bartow' → __MAIN_PROJECT_NAME__: 1
+
+OPC bracket rewrites (raw bracket name → __SITE_SHORT__):
+  [Bartow]: 2  (canonical)
+
+Datasource rewrites (raw datasource value → __SITE_SHORT__):
+  'Bartow': 1  (canonical)
+  'Hampton': 16  (LEAK)
+
+History provider rewrites (raw value → __SITE_SHORT__):
+
+[SCADA]<long-name>/... rewrites (any long name → __SITE_LONG__):
+  'Bartow FL 523': 4  (canonical)
+  'Idabel OK 574': 2  (LEAK)
+
+Plant Info per-path value overrides:
+  Plant Info/Plant Number.value: 523 → '__PLANT_NUM__'
+  Plant Info/CustomerNumber.datasource: '' → '__SITE_SHORT__'
+
+Subtrees dropped during extraction:
+  Top-level folder 'Tram' dropped (not part of any donor branch).
+
+Anomalies observed:
+  (none)

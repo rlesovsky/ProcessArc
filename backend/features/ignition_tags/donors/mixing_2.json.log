@@ -1,0 +1,37 @@
+Source file:        /Users/randylesovsky/Documents/project_manager/Documents/Athens.json
+Source plant name:  Athens AL 527
+Branch extracted:   mixing
+
+Tag counts in extracted fragment (by tagType):
+  AtomicTag: 2886
+  Folder: 64
+  UdtInstance: 253
+
+Whole-value substitutions:
+
+In-string substitutions:
+  'Athens AL 527' → __SITE_LONG__: 1
+  'Athens' → __SITE_SHORT__: 2
+
+OPC bracket rewrites (raw bracket name → __SITE_SHORT__):
+  [Athens]: 738  (canonical)
+  [Rockledge]: 11  (LEAK)
+  [moneta]: 9  (LEAK)
+
+Datasource rewrites (raw datasource value → __SITE_SHORT__):
+  'Athens': 2  (canonical)
+  'Rockledge': 2  (LEAK)
+
+History provider rewrites (raw value → __SITE_SHORT__):
+  'Athens': 84  (canonical)
+
+[SCADA]<long-name>/... rewrites (any long name → __SITE_LONG__):
+  'Athens AL 527': 24  (canonical)
+  'Rockledge FL 524': 3  (LEAK)
+
+Plant Info per-path value overrides:
+
+Subtrees dropped during extraction:
+
+Anomalies observed:
+  (none)

@@ -23,6 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from backend.features.ignition_tags.plant_router import router as plant_bundle_router
 from backend.features.ignition_tags.router import router as ignition_tags_router
 from backend.settings import get_settings
 
@@ -95,6 +96,7 @@ app.include_router(settings_router.router)
 app.include_router(extract_router.router)
 app.include_router(export_router.router)
 app.include_router(ignition_tags_router)
+app.include_router(plant_bundle_router)
 
 
 # Serve the built React app (desktop / bundled mode). Mounted last so all

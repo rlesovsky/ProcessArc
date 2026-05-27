@@ -13,10 +13,31 @@ interface TagBundlePreviewProps {
   totalInstances: number;
 }
 
+// Max children rendered per folder in one batch. Folders larger than
+// this show "Show <N> more" links so the user can pull in the rest in
+// chunks. Without this cap, opening a folder like Mixing/ (which can
+// hold ~3,000 nested rows in a plant bundle) freezes the browser as
+// React tries to render the whole subtree synchronously.
+const CHILDREN_CHUNK = 200;
+
+// Maximum depth Expand All will descend to. The same perf concern
+// applies — fully expanding a ~9000-node bundle is what was blanking
+// the UI. A depth cap keeps Expand All useful for browsing without
+// committing to rendering every atomic tag at once.
+const EXPAND_ALL_MAX_DEPTH = 4;
+
 export function TagBundlePreview({ bundle, totalInstances }: TagBundlePreviewProps) {
-  // Collect every folder/instance key (paths) so Expand All can populate.
-  const allKeys = useMemo(() => collectKeys(bundle, ''), [bundle]);
+  // Collect every folder/instance key (paths) so Expand All can populate
+  // — capped at EXPAND_ALL_MAX_DEPTH so a huge bundle doesn't blow the tree open.
+  const expandAllKeys = useMemo(
+    () => collectKeys(bundle, '', 0, EXPAND_ALL_MAX_DEPTH),
+    [bundle],
+  );
   const [open, setOpen] = useState<Set<string>>(() => new Set([keyFor(bundle, '')]));
+  // Per-folder visible-children count. Folders absent from this map
+  // render the first CHILDREN_CHUNK children. The "Show more" button
+  // bumps the count for that folder by another chunk.
+  const [shownCounts, setShownCounts] = useState<Map<string, number>>(() => new Map());
 
   function toggle(key: string) {
     setOpen(prev => {
@@ -27,11 +48,21 @@ export function TagBundlePreview({ bundle, totalInstances }: TagBundlePreviewPro
     });
   }
 
+  function showMore(key: string, total: number) {
+    setShownCounts(prev => {
+      const next = new Map(prev);
+      const current = next.get(key) ?? CHILDREN_CHUNK;
+      next.set(key, Math.min(current + CHILDREN_CHUNK, total));
+      return next;
+    });
+  }
+
   function expandAll() {
-    setOpen(new Set(allKeys));
+    setOpen(new Set(expandAllKeys));
   }
   function collapseAll() {
     setOpen(new Set());
+    setShownCounts(new Map());
   }
 
   return (
@@ -72,7 +103,15 @@ export function TagBundlePreview({ bundle, totalInstances }: TagBundlePreviewPro
           short ones. min-h keeps it usable when the viewport is very
           short (e.g. split screens). */}
       <ul className="max-h-[calc(100vh-280px)] min-h-[280px] space-y-0.5 overflow-auto p-2 text-xs font-mono">
-        <TreeNodeRow node={bundle} parentKey="" depth={0} open={open} onToggle={toggle} />
+        <TreeNodeRow
+          node={bundle}
+          parentKey=""
+          depth={0}
+          open={open}
+          onToggle={toggle}
+          shownCounts={shownCounts}
+          onShowMore={showMore}
+        />
       </ul>
     </section>
   );
@@ -84,9 +123,19 @@ interface TreeNodeRowProps {
   depth: number;
   open: Set<string>;
   onToggle: (key: string) => void;
+  shownCounts: Map<string, number>;
+  onShowMore: (key: string, total: number) => void;
 }
 
-function TreeNodeRow({ node, parentKey, depth, open, onToggle }: TreeNodeRowProps) {
+function TreeNodeRow({
+  node,
+  parentKey,
+  depth,
+  open,
+  onToggle,
+  shownCounts,
+  onShowMore,
+}: TreeNodeRowProps) {
   const key = keyFor(node, parentKey);
 
   if (isAtomicNode(node)) {
@@ -99,7 +148,7 @@ function TreeNodeRow({ node, parentKey, depth, open, onToggle }: TreeNodeRowProp
             <>
               <span className="text-ink-700 dark:text-ink-200">{node.name}</span>
               <span className="mx-1 text-ink-400 dark:text-ink-500">→</span>
-              <span className="text-ink-500 dark:text-ink-400">{node.opcItemPath.binding}</span>
+              <span className="text-ink-500 dark:text-ink-400">{atomicDescription(node)}</span>
             </>
           }
         />
@@ -110,6 +159,12 @@ function TreeNodeRow({ node, parentKey, depth, open, onToggle }: TreeNodeRowProp
   // Folder or UdtInstance — both have child `tags`.
   const isOpen = open.has(key);
   const children = node.tags;
+  // Per-folder chunked rendering: a freshly expanded folder shows at
+  // most CHILDREN_CHUNK children. "Show <N> more" bumps the count via
+  // onShowMore. Folders with <= CHILDREN_CHUNK children show everything.
+  const requestedCount = shownCounts.get(key) ?? CHILDREN_CHUNK;
+  const visibleCount = Math.min(children.length, requestedCount);
+  const hidden = Math.max(0, children.length - visibleCount);
   const folderIcon = isInstanceNode(node) ? (
     <Package size={12} aria-hidden className="text-ok-600 dark:text-ok-500" />
   ) : (
@@ -152,7 +207,7 @@ function TreeNodeRow({ node, parentKey, depth, open, onToggle }: TreeNodeRowProp
       />
       {isOpen && (
         <ul>
-          {children.map((child, i) => (
+          {children.slice(0, visibleCount).map((child, i) => (
             <TreeNodeRow
               key={`${key}/${i}/${child.name}`}
               node={child}
@@ -160,8 +215,25 @@ function TreeNodeRow({ node, parentKey, depth, open, onToggle }: TreeNodeRowProp
               depth={depth + 1}
               open={open}
               onToggle={onToggle}
+              shownCounts={shownCounts}
+              onShowMore={onShowMore}
             />
           ))}
+          {hidden > 0 && (
+            <li>
+              <button
+                type="button"
+                onClick={() => onShowMore(key, children.length)}
+                style={{ paddingLeft: (depth + 1) * 16 }}
+                className="w-full text-left py-0.5 text-ink-500 hover:text-brand-600 dark:text-ink-400 dark:hover:text-brand-100"
+              >
+                Show {Math.min(CHILDREN_CHUNK, hidden)} more
+                <span className="ml-1 text-ink-400 dark:text-ink-500">
+                  ({hidden} hidden of {children.length})
+                </span>
+              </button>
+            </li>
+          )}
         </ul>
       )}
     </li>
@@ -222,14 +294,59 @@ function keyFor(node: TreeNode, parentKey: string): string {
   return `${parentKey}/${node.tagType}:${node.name}`;
 }
 
-function collectKeys(node: TreeNode, parentKey: string): string[] {
+/**
+ * Short, human-readable description of an atomic tag for the tree row.
+ *
+ * `opcItemPath` may be missing entirely on donor-sourced leaves
+ * (`Plant Info`, `Treating Data`, etc.), which historically only
+ * appeared on xlsx-built tags. Falls back to `value`, `expression`,
+ * `sourceTagPath`, or — last resort — the JSON-stringified node so we
+ * never throw on a leaf shape we haven't anticipated.
+ */
+function atomicDescription(node: AtomicTagLike): string {
+  const opc = node.opcItemPath;
+  if (opc) {
+    if (typeof opc === 'string') return opc;
+    if (typeof opc === 'object' && 'binding' in opc && typeof opc.binding === 'string') {
+      return opc.binding;
+    }
+  }
+  if (node.value !== undefined && node.value !== null) {
+    const v = node.value;
+    if (typeof v === 'string') return JSON.stringify(v);
+    if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+    return truncate(JSON.stringify(v), 80);
+  }
+  if (typeof node.expression === 'string') return truncate(`= ${node.expression}`, 80);
+  if (typeof node.sourceTagPath === 'string') return `→ ${node.sourceTagPath}`;
+  return '(no value)';
+}
+
+/** Subset of AtomicTag's loose-typed shape used by `atomicDescription`. */
+interface AtomicTagLike {
+  opcItemPath?: unknown;
+  value?: unknown;
+  expression?: unknown;
+  sourceTagPath?: unknown;
+}
+
+function truncate(s: string, max: number): string {
+  return s.length > max ? s.slice(0, max - 1) + '…' : s;
+}
+
+function collectKeys(
+  node: TreeNode,
+  parentKey: string,
+  depth: number,
+  maxDepth: number,
+): string[] {
   const out: string[] = [];
   const key = keyFor(node, parentKey);
-  if (!isAtomicNode(node)) {
-    out.push(key);
-    for (let i = 0; i < node.tags.length; i++) {
-      out.push(...collectKeys(node.tags[i], `${key}/${i}`));
-    }
+  if (isAtomicNode(node)) return out;
+  out.push(key);
+  if (depth >= maxDepth) return out;
+  for (let i = 0; i < node.tags.length; i++) {
+    out.push(...collectKeys(node.tags[i], `${key}/${i}`, depth + 1, maxDepth));
   }
   return out;
 }

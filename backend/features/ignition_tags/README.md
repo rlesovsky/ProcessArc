@@ -11,13 +11,33 @@ For architecture/scope see
 
 ## Module layout
 
-| File          | Role                                                                   |
-|---------------|------------------------------------------------------------------------|
-| `schema.py`   | Pydantic models for the output contract (`extra='forbid'` on instances)|
-| `parser.py`   | openpyxl-based workbook reader; emits `ParsedWorkbook`                 |
-| `builder.py`  | `build_nested_structure` port + per-row instance assembly              |
-| `packager.py` | `build_ignition_tree(instances)` → rooted folder tree in Ignition's import format |
-| `router.py`   | `POST /api/ignition-tags/build` — wired in `backend/api/main.py`       |
+| File                | Role                                                                                       |
+|---------------------|--------------------------------------------------------------------------------------------|
+| `schema.py`         | Pydantic models for the output contract (`extra='forbid'` on instances)                    |
+| `parser.py`         | openpyxl-based workbook reader; emits `ParsedWorkbook`                                     |
+| `builder.py`        | `build_nested_structure` port + per-row instance assembly                                  |
+| `packager.py`       | `build_ignition_tree(instances)` → rooted folder tree in Ignition's import format          |
+| `router.py`         | `POST /api/ignition-tags/build` — xlsx-only flow, wired in `backend/api/main.py`           |
+| `donor.py`          | Loader for the committed donor library (Plant Bundle Builder)                              |
+| `substitutor.py`    | Pure substitution engine — placeholder substitution + defensive bracket cleanup + renumbering |
+| `plant_builder.py`  | Orchestrator: loads donors, substitutes, optionally grafts xlsx instances                  |
+| `plant_router.py`   | `POST /api/ignition-tags/build-plant` — full-plant flow, wired in `backend/api/main.py`    |
+| `donors/`           | Committed donor JSON fragments + extraction logs (see `donors/README.md`)                  |
+| `scripts/extract_donor.py` | One-time extraction script that produces the donor library from a real plant export |
+
+## Two endpoints, two flows
+
+| Endpoint                              | Input                                                  | Output                                                       |
+|---------------------------------------|--------------------------------------------------------|--------------------------------------------------------------|
+| `POST /api/ignition-tags/build`       | A populated PLC-team `.xlsx`                           | UDT-instance JSON for the Pumps/Valves/Tanks in that workbook |
+| `POST /api/ignition-tags/build-plant` | Plant identity (long/short/num/region) + counts + optional `.xlsx` | A full nested folder tree rooted at the new plant, ready to import in Ignition Designer |
+
+The `/build` endpoint stays as the source of truth for xlsx →
+UdtInstance conversion. The `/build-plant` endpoint wraps it: it
+composes the donor library into a complete plant tree, and when the
+optional xlsx is supplied, calls into `build_all()` to overlay the
+PLC-team's Pumps/Valves/Tanks UdtInstances on top of the donor's
+defaults.
 
 ## Running the tests
 
