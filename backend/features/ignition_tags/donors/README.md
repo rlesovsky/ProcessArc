@@ -11,15 +11,14 @@ exist rather than per-plant golden exports, etc.).
 
 | File                 | Branch       | Source plant       | Notes                              |
 |----------------------|--------------|--------------------|------------------------------------|
+| `cylinders_1.json`   | cylinders=1  | Derived from `cylinders_2.json` | single numbered child folder: `1` (see "Single-system donors" below) |
 | `cylinders_2.json`   | cylinders=2  | Bartow FL 523      | numbered child folders: `1`, `2`   |
 | `cylinders_3.json`   | cylinders=3  | Athens AL 527      | numbered child folders: `1`, `2`, `3` |
+| `mixing_1.json`      | mixing=1     | Derived from `mixing_2.json`    | single numbered child folder: `1` (see "Single-system donors" below) |
 | `mixing_2.json`      | mixing=2     | Athens AL 527      | numbered child folders: `1`, `2`   |
 | `mixing_3.json`      | mixing=3     | Bartow FL 523      | numbered child folders: `1`, `2`, `3` |
 | `plant_level.json`   | plant_level  | Bartow FL 523      | four top-level folders: `Plant Info`, `Treating Data`, `Offline SQL`, `Production` |
 | `*.json.log`         | —            | —                  | extraction-time audit log (see below) |
-
-`cylinders_1.json` and `mixing_1.json` are intentionally absent — see
-"Single-system donors" below.
 
 ## Placeholder tokens
 
@@ -105,17 +104,20 @@ particular rewrite happened.
 
 ## Single-system donors
 
-`cylinders_1.json` and `mixing_1.json` are not yet committed:
+`cylinders_1.json` and `mixing_1.json` are derived files, not directly
+extracted from a source plant. They were created for the Union City
+build — the first single-system plant project — by trimming the
+count=2 donors:
 
-- No UFP plant we've audited has a single cylinder or single mix
-  system, so we don't have a clean canonical source.
-- Hand-trimming `cylinders_2.json` or `mixing_2.json` down to a single
-  numbered child is the planned fallback. Deferred until the first
-  real 1-system plant project.
+- `mixing_1.json` is `mixing_2.json` filtered to just the folder named
+  `"1"` (37 children, from Athens AL 527's system 1).
+- `cylinders_1.json` is `cylinders_2.json` filtered to just the folder
+  named `"1"` (5 children, from Bartow FL 523's system 1).
 
-The bundle builder fails with a structured `donor.not_available` error
-when one of these is requested. The error message points at the
-hand-trim fallback.
+Both files carry `_derived_from` / `_derived_note` keys recording
+their provenance so a future re-extraction (when a clean canonical
+single-system plant becomes available) can replace them. They pass
+the same placeholder validation as the directly-extracted donors.
 
 ## Re-extracting a donor
 
