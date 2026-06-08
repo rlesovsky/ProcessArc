@@ -41,10 +41,18 @@ a = Analysis(
     ['backend/desktop.py'],
     pathex=[str(REPO_ROOT)],
     binaries=[],
-    # Bundle the built React app at <bundle>/frontend/dist — matches
-    # the lookup in backend/api/main.py:_frontend_dist_dir().
+    # Non-Python files read at runtime. PyInstaller's static analysis
+    # only catches Python imports; anything loaded via open() / Path()
+    # must be listed here or it won't make it into the bundle.
     datas=[
+        # Built React app — served at / by backend/api/main.py:_frontend_dist_dir().
         ('frontend/dist', 'frontend/dist'),
+        # Plant Bundle Builder donor library — read by
+        # backend/features/ignition_tags/donor.py via
+        # `Path(__file__).parent / "donors"`. Without this, every
+        # /api/ignition-tags/build-plant call fails with
+        # `donor.not_available`.
+        ('backend/features/ignition_tags/donors', 'backend/features/ignition_tags/donors'),
     ],
     hiddenimports=[
         # uvicorn picks its HTTP / lifespan / websockets implementations
