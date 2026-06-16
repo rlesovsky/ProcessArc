@@ -58,6 +58,11 @@ a = Analysis(
         # the Build-from-xlsx tab on the frontend so the user doesn't
         # have to re-upload a file they use every time.
         ('backend/features/ignition_tags/defaults', 'backend/features/ignition_tags/defaults'),
+        # Commissioning Workbook template — served by
+        # GET /api/commissioning-workbook/default-template and used as
+        # the substrate that POST /api/commissioning-workbook/build
+        # populates from the customer write-up workbook.
+        ('backend/features/commissioning_workbook/templates', 'backend/features/commissioning_workbook/templates'),
     ],
     hiddenimports=[
         # uvicorn picks its HTTP / lifespan / websockets implementations

@@ -24,6 +24,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.features.ignition_tags.plant_router import router as plant_bundle_router
+from backend.features.commissioning_workbook.router import router as commissioning_workbook_router
 from backend.features.ignition_tags.router import router as ignition_tags_router
 from backend.settings import get_settings
 
@@ -96,6 +97,7 @@ app.include_router(settings_router.router)
 app.include_router(extract_router.router)
 app.include_router(export_router.router)
 app.include_router(ignition_tags_router)
+app.include_router(commissioning_workbook_router)
 app.include_router(plant_bundle_router)
 
 

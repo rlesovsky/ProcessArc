@@ -3,13 +3,15 @@ import { Header } from '@/components/Header';
 import { TabBar, type TabDef } from '@/components/TabBar';
 import { WizardTab, type WizardTabExposed } from '@/screens/WizardTab';
 import { IgnitionTagBuilderTab } from '@/screens/IgnitionTagBuilderTab';
+import { CommissioningWorkbookTab } from '@/screens/CommissioningWorkbookTab';
 import { cn } from '@/lib/cn';
 
-type TabId = 'wizard' | 'ignition-tags';
+type TabId = 'wizard' | 'ignition-tags' | 'commissioning-workbook';
 
 const TABS: ReadonlyArray<TabDef<TabId>> = [
   { id: 'wizard', label: 'Project Wizard' },
   { id: 'ignition-tags', label: 'Ignition Tag Builder' },
+  { id: 'commissioning-workbook', label: 'Commissioning Workbook' },
 ];
 
 export default function App() {
@@ -65,6 +67,18 @@ export default function App() {
         )}
       >
         <IgnitionTagBuilderTab />
+      </div>
+      <div
+        role="tabpanel"
+        id="tabpanel-commissioning-workbook"
+        aria-labelledby="tab-commissioning-workbook"
+        aria-hidden={activeTab !== 'commissioning-workbook'}
+        className={cn(
+          'flex-1 flex-col overflow-hidden',
+          activeTab === 'commissioning-workbook' ? 'flex' : 'hidden',
+        )}
+      >
+        <CommissioningWorkbookTab />
       </div>
     </div>
   );
