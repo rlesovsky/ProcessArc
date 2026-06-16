@@ -1,36 +1,66 @@
-"""FastAPI route for the Ignition Tag Builder.
+"""FastAPI routes for the Ignition Tag Builder.
 
-Single endpoint: POST /api/ignition-tags/build
+POST /api/ignition-tags/build
   multipart/form-data: file=<xlsx>
 
-  → 200: application/json
-         {
-           "bundle":            { "<base_path>": [instance, ...], ... },
-           "validation_report": { "errors": [], "warnings": [...] },
-           "site":              "<site name, for filename hints>",
-           "instance_count":    <int>
-         }
-
-         The frontend renders `validation_report` in its panel and
-         saves only the `bundle` field when the user downloads. That
-         keeps the download a pure Ignition-importable JSON object
-         (no metadata wrapping inside the downloaded file).
-
+  → 200: application/json with bundle + validation_report + site + count
   → 400: { "error": str, "validation_report": ValidationReport }
+
+GET  /api/ignition-tags/default-template
+  → 200: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+         The committed default Ignition tag-list template. The
+         frontend auto-loads this on mount so a fresh visit to the
+         Build-from-xlsx tab is already pre-filled — the user can
+         click Build right away, or replace the file if they have
+         a different template.
 """
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from .builder import build_all
 from .packager import build_ignition_tree
 from .parser import parse_workbook
 
 router = APIRouter(prefix="/api/ignition-tags", tags=["ignition-tags"])
+
+# Committed default Ignition tag-list template. Bundled into the
+# Windows .exe via the `datas` entry in processarc.spec — keep both
+# in sync (see docs/windows_build.md for the bundling pattern).
+DEFAULT_TEMPLATE_PATH = (
+	Path(__file__).parent / "defaults" / "default_template.xlsx"
+)
+DEFAULT_TEMPLATE_FILENAME = "default_template.xlsx"
+
+
+@router.get(
+	"/default-template",
+	summary="Download the committed default Ignition tag-list template",
+)
+def default_template() -> FileResponse:
+	if not DEFAULT_TEMPLATE_PATH.is_file():
+		# Shouldn't happen — the file is committed and bundled — but
+		# fail with a clear message rather than an opaque 500 if it does.
+		raise HTTPException(
+			status_code=404,
+			detail=(
+				f"Default template not found at {DEFAULT_TEMPLATE_PATH}. "
+				"If this is the Windows .exe build, the `defaults/` "
+				"directory may be missing from the PyInstaller spec."
+			),
+		)
+	return FileResponse(
+		DEFAULT_TEMPLATE_PATH,
+		media_type=(
+			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+		),
+		filename=DEFAULT_TEMPLATE_FILENAME,
+	)
 
 
 @router.post(

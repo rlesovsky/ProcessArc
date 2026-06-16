@@ -53,6 +53,11 @@ a = Analysis(
         # /api/ignition-tags/build-plant call fails with
         # `donor.not_available`.
         ('backend/features/ignition_tags/donors', 'backend/features/ignition_tags/donors'),
+        # Built-in default Ignition tag-list template — served by
+        # GET /api/ignition-tags/default-template and auto-loaded by
+        # the Build-from-xlsx tab on the frontend so the user doesn't
+        # have to re-upload a file they use every time.
+        ('backend/features/ignition_tags/defaults', 'backend/features/ignition_tags/defaults'),
     ],
     hiddenimports=[
         # uvicorn picks its HTTP / lifespan / websockets implementations

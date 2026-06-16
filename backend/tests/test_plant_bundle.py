@@ -71,13 +71,28 @@ def test_load_donor_returns_tags_with_no_placeholder_errors():
 		assert errors == [], f"{branch}/{count}: {errors}"
 
 
-def test_load_donor_missing_file_raises_file_not_found():
-	"""1-cylinder donor is deferred; loading it should raise."""
+def test_load_donor_missing_file_raises_file_not_found(tmp_path):
+	"""load_donor() should surface a missing donor as FileNotFoundError.
+
+	Originally this hard-coded `cylinders_1` as the canonical
+	"missing donor" case, but `cylinders_1.json` is now committed
+	(the Union City build). We point DONORS_DIR at an empty tmp dir
+	to exercise the not-found path without depending on which donors
+	happen to be on disk.
+	"""
+	from backend.features.ignition_tags import donor as donor_module
+	original = donor_module.DONORS_DIR
+	donor_module.DONORS_DIR = tmp_path
 	try:
-		load_donor("cylinders", 1)
-	except FileNotFoundError:
-		return
-	raise AssertionError("Expected FileNotFoundError for missing 1-cylinder donor.")
+		try:
+			load_donor("cylinders", 2)
+		except FileNotFoundError:
+			return
+		raise AssertionError(
+			"Expected FileNotFoundError when DONORS_DIR contains no donor files."
+		)
+	finally:
+		donor_module.DONORS_DIR = original
 
 
 def test_load_donor_unknown_placeholder_surfaces_error(tmp_path):
@@ -346,14 +361,26 @@ def test_build_plant_bundle_cylinder_renumber_visible_in_tree():
 	assert cyl_names == ["1", "3"]
 
 
-def test_build_plant_bundle_missing_donor_returns_error():
-	"""A 1-cylinder plant requests cylinders_1, which doesn't exist yet."""
-	config = dict(_FAIRLESS_CONFIG)
-	config["cylinders"] = {"count": 1, "numbering": [1]}
-	bundle, report, _site, _count = build_plant_bundle(config, xlsx_bytes=None)
-	assert bundle == {}
-	codes = {e.code for e in report.errors}
-	assert "donor.not_available" in codes
+def test_build_plant_bundle_missing_donor_returns_error(tmp_path):
+	"""Missing donor on disk → structured `donor.not_available` error.
+
+	Originally this assumed `cylinders_1.json` was uncommitted, but
+	that file now ships. We point DONORS_DIR at an empty tmp dir to
+	make every donor lookup fail, exercising the not-available
+	error path regardless of which donors are on disk.
+	"""
+	from backend.features.ignition_tags import donor as donor_module
+	original = donor_module.DONORS_DIR
+	donor_module.DONORS_DIR = tmp_path
+	try:
+		config = dict(_FAIRLESS_CONFIG)
+		config["cylinders"] = {"count": 2, "numbering": [1, 2]}
+		bundle, report, _site, _count = build_plant_bundle(config, xlsx_bytes=None)
+		assert bundle == {}
+		codes = {e.code for e in report.errors}
+		assert "donor.not_available" in codes
+	finally:
+		donor_module.DONORS_DIR = original
 
 
 def test_build_plant_bundle_missing_required_field_returns_error():

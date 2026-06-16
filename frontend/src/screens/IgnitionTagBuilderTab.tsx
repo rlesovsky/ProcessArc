@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Upload } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import {
@@ -38,16 +38,66 @@ function isXlsx(file: File): boolean {
   return file.name.toLowerCase().endsWith(ACCEPTED_EXTENSION);
 }
 
+// Pull the `filename=...` out of a Content-Disposition header so the
+// auto-loaded default file keeps its server-side name (`default_template.xlsx`)
+// rather than the URL path. Tolerant of both quoted and unquoted forms.
+function filenameFromContentDisposition(header: string | null): string | null {
+  if (!header) return null;
+  const m = header.match(/filename="?([^";]+)"?/i);
+  return m ? m[1] : null;
+}
+
 export function IgnitionTagBuilderTab() {
   const [mode, setMode] = useState<Mode>('xlsx');
   const [view, setView] = useState<View>({ kind: 'upload' });
   const [file, setFile] = useState<File | null>(null);
   const [clientError, setClientError] = useState<string | null>(null);
+  // True when `file` holds the auto-loaded built-in default rather
+  // than a file the user actually picked. Resets to false on any
+  // explicit pick/clear so the badge only shows while the file is
+  // the canonical one shipped with the app.
+  const [isDefault, setIsDefault] = useState(false);
+
+  // Fetch the built-in default template once and pre-fill the
+  // xlsx upload slot with it. Saves a click for the common case
+  // where the same template is used over and over. Silently no-ops
+  // if the backend is unreachable or the endpoint 404s — the user
+  // can still upload manually.
+  useEffect(() => {
+    if (mode !== 'xlsx') return;
+    if (file !== null) return;
+    if (view.kind !== 'upload') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await fetch('/api/ignition-tags/default-template');
+        if (!resp.ok) return;
+        const blob = await resp.blob();
+        // Empty/zero-byte blobs would slip past the size guard in
+        // handlePick — bail before we set state.
+        if (blob.size === 0) return;
+        const filename = filenameFromContentDisposition(
+          resp.headers.get('content-disposition'),
+        ) ?? 'default_template.xlsx';
+        const f = new File([blob], filename, {
+          type: blob.type ||
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        });
+        if (cancelled) return;
+        setFile(f);
+        setIsDefault(true);
+      } catch {
+        // Network error / backend down — leave the upload zone empty.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [mode, view.kind, file]);
 
   function resetToUpload() {
     setView({ kind: 'upload' });
     setFile(null);
     setClientError(null);
+    setIsDefault(false);
   }
 
   function handleModeChange(next: Mode) {
@@ -57,6 +107,10 @@ export function IgnitionTagBuilderTab() {
   }
 
   function handlePick(picked: File | null) {
+    // Any explicit pick — including "clear" (null) — drops the
+    // built-in-default badge. The user is now in control of the
+    // slot's contents.
+    setIsDefault(false);
     if (!picked) {
       setFile(null);
       setClientError(null);
@@ -123,6 +177,7 @@ export function IgnitionTagBuilderTab() {
             {mode === 'xlsx' && (
               <UploadCard
                 file={file}
+                isDefault={isDefault}
                 onPick={handlePick}
                 onSubmit={handleSubmitXlsx}
                 busy={view.kind === 'busy'}
@@ -195,13 +250,15 @@ function ModeSwitcher({ mode, onChange, disabled }: ModeSwitcherProps) {
 
 interface UploadCardProps {
   file: File | null;
+  /** True when `file` is the auto-loaded built-in default rather than a user pick. */
+  isDefault: boolean;
   onPick: (file: File | null) => void;
   onSubmit: () => void;
   busy: boolean;
   clientError: string | null;
 }
 
-function UploadCard({ file, onPick, onSubmit, busy, clientError }: UploadCardProps) {
+function UploadCard({ file, isDefault, onPick, onSubmit, busy, clientError }: UploadCardProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const canSubmit = file !== null && !busy;
 
@@ -252,15 +309,23 @@ function UploadCard({ file, onPick, onSubmit, busy, clientError }: UploadCardPro
         <Upload className="text-ink-500 dark:text-ink-400" size={26} aria-hidden />
         {file ? (
           <>
-            <div className="font-mono text-xs text-ink-700 dark:text-ink-200 break-all">
+            <div className="flex items-center gap-2 font-mono text-xs text-ink-700 dark:text-ink-200 break-all">
               {file.name}
+              {isDefault && (
+                <span
+                  title="The default template was loaded automatically. Pick a different file to replace it, or click Build Tags to use as-is."
+                  className="rounded-full bg-ink-100 px-2 py-0.5 font-sans text-[10px] font-medium text-ink-700 dark:bg-ink-700 dark:text-ink-200"
+                >
+                  built-in default
+                </span>
+              )}
             </div>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onPick(null); }}
               className="text-[11px] text-ink-500 underline-offset-2 hover:underline dark:text-ink-400"
             >
-              Clear
+              {isDefault ? 'Clear (replace with my own file)' : 'Clear'}
             </button>
           </>
         ) : (
